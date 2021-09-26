@@ -1,0 +1,18 @@
+[package]
+name = "shm-ipband"
+version = "0.1.0"
+authors = ["Shish <shish@shishnet.org>"]
+edition = "2018"
+build = "build.rs"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+tokio-postgres = "0.7"
+pretty_env_logger = "*"
+structopt = "*"
+log = "*"
+gethostname = "*"
+futures = "*"
+
+[build-dependencies]
+vergen = "3"
