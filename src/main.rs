@@ -3,6 +3,7 @@ use futures::FutureExt;
 use futures::{future, stream, StreamExt};
 use std::error::Error;
 use std::io::Write;
+use std::net::IpAddr;
 use std::process::{Command, Stdio};
 use std::time::SystemTime;
 use structopt::StructOpt;
@@ -65,18 +66,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     db.query("LISTEN bans", &[]).await?;
 
-    tokio::spawn(async move {
-        loop {
-            if let Some(AsyncMessage::Notification(future_notification)) = rx.next().await {
-                let notification = future::ready(Some(future_notification)).await.unwrap();
-                if notification.channel() == "bans" {
-                    update_bans(&db).await.unwrap();
-                }
+    loop {
+        if let Some(AsyncMessage::Notification(future_notification)) = rx.next().await {
+            let notification = future::ready(Some(future_notification)).await.unwrap();
+            if notification.channel() == "bans" {
+                update_bans(&db).await.unwrap();
             }
         }
-    });
-
-    Ok(())
+    }
 }
 
 async fn update_bans(db: &tokio_postgres::Client) -> Result<(), Box<dyn Error>> {
@@ -94,13 +91,14 @@ async fn update_bans(db: &tokio_postgres::Client) -> Result<(), Box<dyn Error>> 
     ipset_cmds.push(format!("create ipband hash:ip hashsize {} -exist", n));
     ipset_cmds.push(format!("create ipband_new hash:ip hashsize {} -exist", n));
     for row in rows {
-        let ip: String = row.get(0);
-        if !ip.contains('/') {
-            ipset_cmds.push(format!("add ipband_new {}", ip));
-        }
+        // FIXME: range bans are silently converted to single-IP bans
+        // (python version silently dropped range bans, so this is less-bad...)
+        let ip: IpAddr = row.get(0);
+        ipset_cmds.push(format!("add ipband_new {}", ip));
     }
     ipset_cmds.push("swap ipband ipband_new".to_string());
     ipset_cmds.push("flush ipband_new".to_string());
+    // println!("{}", ipset_cmds.join("\n"));
 
     let mut ipset = Command::new("ipset")
         .arg("restore")
@@ -117,8 +115,8 @@ async fn update_bans(db: &tokio_postgres::Client) -> Result<(), Box<dyn Error>> 
     info!(
         "Setting {} bans ({:.2} select, {:.2} set)",
         n,
-        ts2.duration_since(ts1)?.as_secs(),
-        ts3.duration_since(ts2)?.as_secs()
+        ts2.duration_since(ts1)?.as_millis() as f32 / 1000.0,
+        ts3.duration_since(ts2)?.as_millis() as f32 / 1000.0
     );
 
     Ok(())
