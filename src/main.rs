@@ -5,7 +5,6 @@ use std::error::Error;
 use std::io::Write;
 use std::net::IpAddr;
 use std::process::{Command, Stdio};
-use std::time::SystemTime;
 use structopt::StructOpt;
 use tokio_postgres::{AsyncMessage, NoTls};
 #[macro_use]
@@ -29,12 +28,11 @@ pub struct Args {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let args = Args::from_args();
-    let dsn = args.dsn.clone();
-
     pretty_env_logger::init();
+
+    let args = Args::from_args();
     let fqdn = gethostname::gethostname().into_string().unwrap();
-    let name = match args.name.clone() {
+    let name = match args.name {
         Some(name) => name,
         None => fqdn.split('.').next().unwrap().to_string(),
     };
@@ -49,7 +47,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
-    let (db, mut connection) = tokio_postgres::connect(dsn.as_str(), NoTls).await?;
+    let (db, mut connection) = tokio_postgres::connect(args.dsn.as_str(), NoTls).await?;
     let (tx, mut rx) = mpsc::unbounded();
     let stream =
         stream::poll_fn(move |cx| connection.poll_message(cx).map_err(|e| panic!("{}", e)));
@@ -77,14 +75,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 
 async fn update_bans(db: &tokio_postgres::Client) -> Result<(), Box<dyn Error>> {
-    let ts1 = SystemTime::now();
-
     let rows = db
         .query("SELECT ip FROM bans WHERE mode = 'firewall' AND added < now() AND (expires > now() OR expires IS NULL)", &[])
         .await?;
     let n = rows.len();
-
-    let ts2 = SystemTime::now();
+    info!("Setting {} bans", n);
 
     // hash:net for giving a different CIDR to each entry
     let mut ipset_cmds = Vec::with_capacity(n + 10);
@@ -98,7 +93,6 @@ async fn update_bans(db: &tokio_postgres::Client) -> Result<(), Box<dyn Error>> 
     }
     ipset_cmds.push("swap ipband ipband_new".to_string());
     ipset_cmds.push("flush ipband_new".to_string());
-    // println!("{}", ipset_cmds.join("\n"));
 
     let mut ipset = Command::new("ipset")
         .arg("restore")
@@ -109,15 +103,6 @@ async fn update_bans(db: &tokio_postgres::Client) -> Result<(), Box<dyn Error>> 
 
     Command::new("/bin/sh").args(["-c", "iptables -L -n | grep ipband | grep 80  || iptables -A INPUT -m set --match-set ipband src -p tcp --dport 80 -j DROP"]).output()?;
     Command::new("/bin/sh").args(["-c", "iptables -L -n | grep ipband | grep 443 || iptables -A INPUT -m set --match-set ipband src -p tcp --dport 443 -j DROP"]).output()?;
-
-    let ts3 = SystemTime::now();
-
-    info!(
-        "Setting {} bans ({:.2} select, {:.2} set)",
-        n,
-        ts2.duration_since(ts1)?.as_millis() as f32 / 1000.0,
-        ts3.duration_since(ts2)?.as_millis() as f32 / 1000.0
-    );
 
     Ok(())
 }
