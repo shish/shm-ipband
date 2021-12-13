@@ -11,7 +11,7 @@ use tokio_postgres::{AsyncMessage, NoTls};
 #[macro_use]
 extern crate log;
 
-#[derive(StructOpt, Clone)]
+#[derive(StructOpt)]
 #[structopt(about = "IP Ban management daemon")]
 pub struct Args {
     /// Where should we find our list of banned IPs
