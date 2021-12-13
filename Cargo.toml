@@ -13,6 +13,7 @@ structopt = "0.3"
 log = "0.4"
 gethostname = "0.2"
 futures = "0.3"
+anyhow = "1"
 
 [build-dependencies]
 vergen = "3"

@@ -1,12 +1,13 @@
+use anyhow::Result;
 use futures::channel::mpsc;
 use futures::FutureExt;
 use futures::{future, stream, StreamExt};
-use std::error::Error;
 use std::io::Write;
 use std::net::IpAddr;
 use std::process::{Command, Stdio};
 use structopt::StructOpt;
 use tokio_postgres::{AsyncMessage, NoTls};
+
 #[macro_use]
 extern crate log;
 
@@ -27,7 +28,7 @@ pub struct Args {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<()> {
     pretty_env_logger::init();
 
     let args = Args::from_args();
@@ -74,7 +75,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 }
 
-async fn update_bans(db: &tokio_postgres::Client) -> Result<(), Box<dyn Error>> {
+async fn update_bans(db: &tokio_postgres::Client) -> Result<()> {
     let rows = db
         .query("SELECT ip FROM bans WHERE mode = 'firewall' AND added < now() AND (expires > now() OR expires IS NULL)", &[])
         .await?;
