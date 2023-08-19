@@ -42,8 +42,12 @@ async fn main() -> Result<()> {
 
     let (db, mut connection) = tokio_postgres::connect(args.dsn.as_str(), NoTls).await?;
     let (tx, mut rx) = mpsc::unbounded();
-    let stream =
-        stream::poll_fn(move |cx| connection.poll_message(cx).map_err(|e| panic!("{}", e)));
+    let stream = stream::poll_fn(move |cx| {
+        connection.poll_message(cx).map_err(|e| {
+            error!("Database connection error: {}", e);
+            std::process::exit(1);
+        })
+    });
     let c = stream.forward(tx).map(|r| r.unwrap());
     tokio::spawn(c);
 
