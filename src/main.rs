@@ -18,10 +18,6 @@ pub struct Args {
     #[structopt(short = "d", default_value = "user=test host=localhost")]
     pub dsn: String,
 
-    /// This host's name
-    #[structopt(short = "n")]
-    pub name: Option<String>,
-
     /// Show version
     #[structopt(long = "version")]
     pub version: bool,
@@ -33,16 +29,12 @@ async fn main() -> Result<()> {
 
     let args = Args::from_args();
     let fqdn = gethostname::gethostname().into_string().unwrap();
-    let name = match args.name {
-        Some(name) => name,
-        None => fqdn.split('.').next().unwrap().to_string(),
-    };
+    let name = fqdn.split('.').next().unwrap().to_string();
     info!(
-        "shm-ipband {} built on {} - running on {} ({})",
+        "shm-ipband {} built on {} - running on {}",
         env!("VERGEN_GIT_SHA").chars().take(7).collect::<String>(),
         env!("VERGEN_BUILD_DATE"),
         fqdn,
-        name,
     );
     if args.version {
         return Ok(());
