@@ -39,7 +39,7 @@ async fn main() -> Result<()> {
     };
     info!(
         "shm-ipband {} built on {} - running on {} ({})",
-        env!("VERGEN_SHA_SHORT"),
+        env!("VERGEN_GIT_SHA").chars().take(7).collect::<String>(),
         env!("VERGEN_BUILD_DATE"),
         fqdn,
         name,
