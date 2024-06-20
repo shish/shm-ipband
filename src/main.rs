@@ -101,8 +101,8 @@ async fn update_bans(db: &tokio_postgres::Client) -> Result<()> {
     writeln!(ipset.stdin.as_ref().unwrap(), "{}", ipset_cmds.join("\n"))?;
     ipset.wait()?;
 
-    Command::new("/bin/sh").args(["-c", "iptables -L -n | grep ipband | grep 80  || iptables -A INPUT -m set --match-set ipband src -p tcp --dport 80 -j DROP"]).output()?;
-    Command::new("/bin/sh").args(["-c", "iptables -L -n | grep ipband | grep 443 || iptables -A INPUT -m set --match-set ipband src -p tcp --dport 443 -j DROP"]).output()?;
+    let iptables = "iptables -L -n | grep ipband | grep 443 || iptables -A INPUT -m set --match-set ipband src -p tcp -m multiport --dports 80,443 -j DROP";
+    Command::new("/bin/sh").args(["-c", iptables]).output()?;
 
     Ok(())
 }
