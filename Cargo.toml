@@ -1,19 +1,17 @@
 [package]
 name = "shm-ipband"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Shish <shish@shishnet.org>"]
-edition = "2018"
+edition = "2021"
 build = "build.rs"
 
 [dependencies]
-tokio = { version = "1", features = ["full"] }
-tokio-postgres = "0.7"
+clap = { version = "4", features = ["derive"] }
+postgres = "0.19"
 pretty_env_logger = "0.5"
-structopt = "0.3"
 log = "0.4"
-gethostname = "0.4"
-futures = "0.3"
 anyhow = "1"
+shadow-rs = "1.4"
 
 [build-dependencies]
-vergen = { version = "8.0.0", features = ["build", "git", "gitcl"] }
+shadow-rs = "1.4"
