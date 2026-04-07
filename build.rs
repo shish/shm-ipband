@@ -1,5 +1,6 @@
 use shadow_rs::ShadowBuilder;
 
-fn main() {
-    ShadowBuilder::builder().build().unwrap();
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ShadowBuilder::builder().build()?;
+    Ok(())
 }

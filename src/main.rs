@@ -71,7 +71,14 @@ fn update_bans(db: &mut Client) -> Result<()> {
         .arg("restore")
         .stdin(Stdio::piped())
         .spawn()?;
-    writeln!(ipset.stdin.as_ref().unwrap(), "{}", ipset_cmds.join("\n"))?;
+    writeln!(
+        ipset
+            .stdin
+            .as_ref()
+            .ok_or(anyhow::anyhow!("Failed to write to ipset"))?,
+        "{}",
+        ipset_cmds.join("\n")
+    )?;
     ipset.wait()?;
 
     let iptables = "iptables -L -n | grep ipband | grep 443 || iptables -A INPUT -m set --match-set ipband src -p tcp -m multiport --dports 80,443 -j DROP";
